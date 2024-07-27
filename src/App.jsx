@@ -12,6 +12,7 @@ function App() {
     <div className="flex">
 
       <SideBar onIconClick={setActiveComponent} />
+      {activeComponent === null && <CreateForm />}
       {activeComponent === 'CreateForm' && <CreateForm />}
       {activeComponent === 'ListComponent' && <ListComponent />}
       {activeComponent === 'ExportComponent' && <ExportComponent />}
