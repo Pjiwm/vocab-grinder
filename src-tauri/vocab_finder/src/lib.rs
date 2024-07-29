@@ -1,5 +1,4 @@
 use jisho::{lookup, Entry};
-use rayon::prelude::*;
 use serde::Deserialize;
 use std::{
     char,
@@ -9,6 +8,7 @@ use std::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc, Mutex,
     },
+    thread,
 };
 
 const HIRAGANA: &str = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんがぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽぁぃぅぇぉゃゅょゎゕゖゔゕゖゝゞゟ";
@@ -43,8 +43,9 @@ pub struct ConcurrentVocabBuilder {
 impl VocabBuilder for ConcurrentVocabBuilder {
     fn start(&mut self, input: String) {
         self.enabled.store(true, Ordering::Relaxed);
-        let input_vectors: Vec<&str> = input
+        let input_vectors: Vec<String> = input
             .split(&['　', '。', '、', '「', '」', '〜', '（', '）'])
+            .map(|s| s.to_string())
             .collect();
 
         self.total_sentences = input_vectors.len();
@@ -55,14 +56,14 @@ impl VocabBuilder for ConcurrentVocabBuilder {
 
         self.remaining_sentences
             .store(input_vectors.len(), Ordering::Relaxed);
-
         input_vectors
-            .par_chunks(input_vectors.len() / 8)
+            .chunks(input_vectors.len() / 8)
+            .into_iter()
             .for_each(|sentences_chunk| {
                 let store = self.vocab_store.clone();
                 chunk_search(
                     store,
-                    sentences_chunk,
+                    sentences_chunk.to_vec(),
                     self.enabled.clone(),
                     self.remaining_sentences.clone(),
                 )
@@ -93,29 +94,31 @@ impl VocabBuilder for ConcurrentVocabBuilder {
 
 fn chunk_search(
     store: Arc<Mutex<HashMap<DictEntry, usize>>>,
-    sentences: &[&str],
+    sentences: Vec<String>,
     enabled: Arc<AtomicBool>,
     remaining: Arc<AtomicUsize>,
 ) {
-    for sentence in sentences.into_iter() {
-        let thread_id = std::thread::current().id();
-        // Early return when stopped. Stopping this function will result in a closed thread.
-        if !enabled.load(Ordering::Relaxed) {
-            return;
-        }
-        let words = word_finder(sentence);
-        if let Ok(mut store_lock) = store.lock() {
-            words.into_iter().for_each(|word| {
-                store_lock
-                    .entry(word)
-                    .and_modify(|occurence| *occurence += 1)
-                    .or_insert(1);
-            });
-        };
+    thread::spawn(move || {
+        for sentence in sentences.into_iter() {
+            let thread_id = std::thread::current().id();
+            // Early return when stopped. Stopping this function will result in a closed thread.
+            if !enabled.load(Ordering::Relaxed) {
+                return;
+            }
+            let words = word_finder(&sentence);
+            if let Ok(mut store_lock) = store.lock() {
+                words.into_iter().for_each(|word| {
+                    store_lock
+                        .entry(word)
+                        .and_modify(|occurence| *occurence += 1)
+                        .or_insert(1);
+                });
+            };
 
-        let r = remaining.fetch_sub(1, Ordering::SeqCst);
-        println!("{r} on thread: {:?}", thread_id);
-    }
+            let r = remaining.fetch_sub(1, Ordering::SeqCst);
+            println!("{r} on thread: {:?}", thread_id);
+        }
+    });
 }
 
 fn word_finder(search_str: &str) -> Vec<DictEntry> {
