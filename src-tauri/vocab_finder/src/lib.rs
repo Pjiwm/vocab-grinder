@@ -48,6 +48,11 @@ impl VocabBuilder for ConcurrentVocabBuilder {
             .collect();
 
         self.total_sentences = input_vectors.len();
+        // Early return in case of there not being enough vocab in List.
+        if self.total_sentences < 8 {
+            return;
+        }
+
         self.remaining_sentences
             .store(input_vectors.len(), Ordering::Relaxed);
 
