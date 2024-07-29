@@ -2309,12 +2309,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 
 [[package]]
-name = "saku"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a5f0e30de593e6ed2f9f5f4c9ef1a6fb137e6929534035e108ede0bf600918a"
-
-[[package]]
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3257,11 +3251,9 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 name = "vocab-grinder"
 version = "0.0.1"
 dependencies = [
- "saku",
- "serde",
- "serde_json",
  "tauri",
  "tauri-build",
+ "vocab_finder",
 ]
 
 [[package]]

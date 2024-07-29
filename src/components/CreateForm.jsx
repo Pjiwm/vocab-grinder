@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { invoke } from "@tauri-apps/api/tauri";
 
 const CreateForm = () => {
@@ -19,6 +19,7 @@ const CreateForm = () => {
       alert('Failed to create vocab list.');
     }
   };
+
 
   return (
     <div className="flex flex-col justify-center items-center h-screen w-screen bg-gray-800">
@@ -60,9 +61,52 @@ const CreateForm = () => {
             </button>
           </div>
         </form>
+        <ProgressBar />
       </div>
+
     </div>
   );
 };
+
+
+const ProgressBar = () => {
+
+  const [progressStatus, setProgressStatus] = useState(0);
+
+  const fetchProgress = async () => {
+    try {
+      const progress = await invoke('request_progress');
+      setProgressStatus(progress);
+    } catch (error) {
+      console.error('Error fetching progress:', error);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch progress every 100ms
+    const interval = setInterval(() => {
+      fetchProgress();
+    }, 1000);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(interval);
+  }, []);
+  if (progressStatus >= 100) {
+    return null; // Hide the component when progressStatus is 100 or more
+  }
+  return (
+    <div className="flex items-center justify-center p-4 bg-gray-800 rounded-lg">
+      <div className="relative flex items-center">
+        <div className="inset-0 flex items-center justify-center">
+          <svg className="w-10 h-10 text-gray-200 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path fill="none" d="M0 0h24v24H0z" />
+            <path d="M4 12a8 8 0 0 1 16 0h-2a6 6 0 0 0-12 0H4z" fill="currentColor" />
+          </svg>
+        </div>
+        <p className='text-white text-2xl font-semibold'>{progressStatus.toFixed(2)}%</p>
+      </div>
+    </div>
+  );
+}
 
 export default CreateForm;
