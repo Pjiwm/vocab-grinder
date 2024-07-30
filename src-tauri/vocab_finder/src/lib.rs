@@ -26,7 +26,7 @@ impl Hash for DictEntry {
 }
 
 pub trait VocabBuilder {
-    fn start(&mut self, input: String);
+    fn start(&self, input: String);
     fn stop(&self);
     fn progress(&self) -> f64;
     fn results(self) -> HashMap<DictEntry, usize>;
@@ -37,20 +37,21 @@ pub struct ConcurrentVocabBuilder {
     vocab_store: Arc<Mutex<HashMap<DictEntry, usize>>>,
     enabled: Arc<AtomicBool>,
     remaining_sentences: Arc<AtomicUsize>,
-    total_sentences: usize,
+    total_sentences: AtomicUsize,
 }
 
 impl VocabBuilder for ConcurrentVocabBuilder {
-    fn start(&mut self, input: String) {
+    fn start(&self, input: String) {
         self.enabled.store(true, Ordering::Relaxed);
         let input_vectors: Vec<String> = input
             .split(&['　', '。', '、', '「', '」', '〜', '（', '）'])
             .map(|s| s.to_string())
             .collect();
 
-        self.total_sentences = input_vectors.len();
+        self.total_sentences
+            .store(input_vectors.len(), Ordering::Relaxed);
         // Early return in case of there not being enough vocab in List.
-        if self.total_sentences < 8 {
+        if input_vectors.len() < 8 {
             return;
         }
 
@@ -75,9 +76,15 @@ impl VocabBuilder for ConcurrentVocabBuilder {
     }
 
     fn progress(&self) -> f64 {
-        (1.0 - (self.remaining_sentences.load(Ordering::SeqCst) as f64
-            / self.total_sentences as f64))
-            * 100.0
+        let remaining = self.remaining_sentences.load(Ordering::SeqCst) as f64;
+        let total = self.total_sentences.load(Ordering::SeqCst) as f64;
+        let progress = (1.0 - (remaining / total)) * 100.0;
+
+        if progress.is_nan() {
+            0.0
+        } else {
+            progress
+        }
     }
     fn results(self) -> HashMap<DictEntry, usize> {
         if let Ok(vocab_lock) = Arc::try_unwrap(self.vocab_store) {
@@ -177,7 +184,7 @@ mod tests {
     また、日本の食文化も多様で、寿司、ラーメン、天ぷらなどが世界中で人気です。さらに、アニメや漫画といったポップカルチャーも、
     日本から世界に広まっています。日本の伝統と現代が融合した魅力的な国です。
     "#.to_string();
-        let mut vocab_builder = ConcurrentVocabBuilder::default();
+        let vocab_builder = ConcurrentVocabBuilder::default();
         vocab_builder.start(japanese_paragraph);
         while vocab_builder.progress() != 100f64 {
             println!("progress: {}", vocab_builder.progress());

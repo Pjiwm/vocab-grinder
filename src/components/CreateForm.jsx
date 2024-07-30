@@ -91,7 +91,8 @@ const ProgressBar = () => {
     // Clean up interval on component unmount
     return () => clearInterval(interval);
   }, []);
-  if (progressStatus >= 100) {
+  if (progressStatus >= 100 || progressStatus == 0) {
+
     return null; // Hide the component when progressStatus is 100 or more
   }
   return (
