@@ -1,4 +1,4 @@
-mod models;
+pub mod models;
 mod schema;
 use crate::models::{List, Word};
 use crate::schema::{CREATE_LIST_TABLE, CREATE_WORD_TABLE};
@@ -6,7 +6,7 @@ use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{params, Result};
 use std::sync::Arc;
-
+#[derive(Clone)]
 pub struct Repository {
     pool: Arc<Pool<SqliteConnectionManager>>,
 }
@@ -36,10 +36,11 @@ impl Repository {
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
     }
 
-    pub fn create_list(&self, name: &str) -> Result<()> {
+    pub fn create_list(&self, name: &str) -> Result<i64> {
         let conn = self.get_connection()?;
         conn.execute("INSERT INTO list (name) VALUES (?1)", params![name])?;
-        Ok(())
+        let list_id = conn.last_insert_rowid();
+        Ok(list_id)
     }
 
     pub fn add_word_to_list(&self, list_id: i32, word: &Word) -> Result<()> {

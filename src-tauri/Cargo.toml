@@ -1,4 +1,4 @@
-workspace = { members = [ "repository","vocab_finder"] }
+workspace = { members = [ "repository", "vocab_finder"] }
 [package]
 name = "vocab-grinder"
 version = "0.0.1"

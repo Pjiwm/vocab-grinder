@@ -16,6 +16,15 @@ const HIRAGANA: &str = "あいうえおかきくけこさしすせそたちつ�
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct DictEntry(Entry);
 
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct WeighedEntry(pub Entry, pub usize);
+
+impl From<(Entry, usize)> for WeighedEntry {
+    fn from(entry: (Entry, usize)) -> Self {
+        WeighedEntry(entry.0, entry.1)
+    }
+}
+
 impl Eq for DictEntry {}
 
 impl Hash for DictEntry {
@@ -29,15 +38,20 @@ pub trait VocabBuilder {
     fn start(&self, input: String);
     fn stop(&self);
     fn progress(&self) -> f64;
-    fn results(self) -> HashMap<DictEntry, usize>;
+    fn compute_result(&self);
+    fn results_done(&self) -> bool;
+    fn get_result(&self) -> Vec<WeighedEntry>;
+    fn is_on(&self) -> bool;
 }
 
 #[derive(Default)]
 pub struct ConcurrentVocabBuilder {
     vocab_store: Arc<Mutex<HashMap<DictEntry, usize>>>,
     enabled: Arc<AtomicBool>,
+    results_done: Arc<AtomicBool>,
     remaining_sentences: Arc<AtomicUsize>,
     total_sentences: AtomicUsize,
+    result: Arc<Mutex<Vec<WeighedEntry>>>,
 }
 
 impl VocabBuilder for ConcurrentVocabBuilder {
@@ -59,7 +73,6 @@ impl VocabBuilder for ConcurrentVocabBuilder {
             .store(input_vectors.len(), Ordering::Relaxed);
         input_vectors
             .chunks(input_vectors.len() / 8)
-            .into_iter()
             .for_each(|sentences_chunk| {
                 let store = self.vocab_store.clone();
                 chunk_search(
@@ -86,15 +99,60 @@ impl VocabBuilder for ConcurrentVocabBuilder {
             progress
         }
     }
-    fn results(self) -> HashMap<DictEntry, usize> {
-        if let Ok(vocab_lock) = Arc::try_unwrap(self.vocab_store) {
-            if let Ok(inner_map) = vocab_lock.into_inner() {
-                inner_map
-            } else {
-                HashMap::new()
+
+    fn compute_result(&self) {
+        let vocab_store = Arc::clone(&self.vocab_store);
+        let result = Arc::clone(&self.result);
+        let result_status = Arc::clone(&self.results_done);
+
+        thread::spawn(move || {
+            // Lock the vocab_store and clone the inner HashMap
+            let inner_map = match vocab_store.lock() {
+                Ok(vocab_lock) => vocab_lock.clone(),
+                Err(_) => {
+                    eprintln!("Failed to lock vocab_store");
+                    return;
+                }
+            };
+
+            // Compute importance values and create WeighedEntry
+            let mut results: Vec<WeighedEntry> = inner_map
+                .into_iter()
+                .map(|(entry, occurrence)| {
+                    let importance = (occurrence as i32 * entry.0.frequency) as usize;
+                    WeighedEntry(entry.0, importance)
+                })
+                .collect();
+
+            // Sort the results by importance value in descending order
+            results.sort_by(|a, b| b.1.cmp(&a.1));
+
+            // Populate the result in the shared result Arc<Mutex<Vec<WeighedEntry>>>
+            match result.lock() {
+                Ok(mut result_lock) => {
+                    *result_lock = results;
+                }
+                Err(_) => {
+                    eprintln!("Failed to lock result");
+                }
             }
+            result_status.store(true, Ordering::SeqCst);
+        });
+    }
+
+    fn is_on(&self) -> bool {
+        self.enabled.load(Ordering::SeqCst)
+    }
+
+    fn results_done(&self) -> bool {
+        self.results_done.load(Ordering::SeqCst)
+    }
+
+    fn get_result(&self) -> Vec<WeighedEntry> {
+        if let Ok(lock) = self.result.lock() {
+            lock.clone()
         } else {
-            HashMap::new()
+            Vec::new()
         }
     }
 }
@@ -189,6 +247,6 @@ mod tests {
         while vocab_builder.progress() != 100f64 {
             println!("progress: {}", vocab_builder.progress());
         }
-        println!("{}", vocab_builder.results().len());
+        // println!("{}", vocab_builder.results().len());
     }
 }
