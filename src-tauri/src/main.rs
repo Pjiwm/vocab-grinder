@@ -1,4 +1,6 @@
+use repository::Repository;
 use vocab_finder::{ConcurrentVocabBuilder, VocabBuilder};
+
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 // #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -24,4 +26,20 @@ fn main() {
         .invoke_handler(tauri::generate_handler![create_list, request_progress])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+struct StateManager {
+    repo: Repository,
+    pub vocab_builder: Box<dyn VocabBuilder>,
+}
+
+impl StateManager {
+    fn new(db_path: &str, vocab_builder: Box<dyn VocabBuilder>) -> Self {
+        StateManager {
+            repo: Repository::new(db_path).expect("Error while trying to create/use database."),
+            vocab_builder,
+        }
+    }
+
+    fn write_new_list(&self) {}
 }

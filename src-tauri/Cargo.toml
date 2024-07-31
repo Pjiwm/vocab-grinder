@@ -1,4 +1,4 @@
-workspace = { members = ["vocab_finder"] }
+workspace = { members = [ "repository","vocab_finder"] }
 [package]
 name = "vocab-grinder"
 version = "0.0.1"
@@ -14,6 +14,7 @@ tauri-build = { version = "1", features = [] }
 [dependencies]
 tauri = { version = "1", features = ["shell-open"] }
 vocab_finder = { path = "vocab_finder"}
+repository = { path = "repository"}
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
