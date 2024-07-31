@@ -2,28 +2,49 @@ mod models;
 mod schema;
 use crate::models::{List, Word};
 use crate::schema::{CREATE_LIST_TABLE, CREATE_WORD_TABLE};
-use rusqlite::{params, Connection, Result};
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
+use rusqlite::{params, Result};
+use std::sync::Arc;
 
 pub struct Repository {
-    conn: Connection,
+    pool: Arc<Pool<SqliteConnectionManager>>,
 }
 
 impl Repository {
     pub fn new(db_path: &str) -> Result<Self> {
-        let conn = Connection::open(db_path)?;
+        let manager = SqliteConnectionManager::file(db_path);
+        let pool = Pool::builder()
+            .build(manager)
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+        let conn = pool
+            .get()
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+
+        // Initialize the database schema
         conn.execute(CREATE_LIST_TABLE, [])?;
         conn.execute(CREATE_WORD_TABLE, [])?;
-        Ok(Self { conn })
+
+        Ok(Self {
+            pool: Arc::new(pool),
+        })
+    }
+
+    fn get_connection(&self) -> Result<r2d2::PooledConnection<SqliteConnectionManager>> {
+        self.pool
+            .get()
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
     }
 
     pub fn create_list(&self, name: &str) -> Result<()> {
-        self.conn
-            .execute("INSERT INTO list (name) VALUES (?1)", params![name])?;
+        let conn = self.get_connection()?;
+        conn.execute("INSERT INTO list (name) VALUES (?1)", params![name])?;
         Ok(())
     }
 
     pub fn add_word_to_list(&self, list_id: i32, word: &Word) -> Result<()> {
-        self.conn.execute(
+        let conn = self.get_connection()?;
+        conn.execute(
             "INSERT INTO word (list_id, word, reading, translation, frequency) VALUES (?1, ?2, ?3, ?4, ?5)",
             params![list_id, word.word, word.reading, word.translation, word.frequency],
         )?;
@@ -31,7 +52,8 @@ impl Repository {
     }
 
     pub fn get_lists(&self) -> Result<Vec<List>> {
-        let mut stmt = self.conn.prepare("SELECT id, name FROM list")?;
+        let conn = self.get_connection()?;
+        let mut stmt = conn.prepare("SELECT id, name FROM list")?;
         let list_iter = stmt.query_map([], |row| {
             Ok(List {
                 id: row.get(0)?,
@@ -47,7 +69,8 @@ impl Repository {
     }
 
     pub fn get_words_for_list(&self, list_id: i32) -> Result<Vec<Word>> {
-        let mut stmt = self.conn.prepare("SELECT id, list_id, word, reading, translation, frequency FROM word WHERE list_id = ?1")?;
+        let conn = self.get_connection()?;
+        let mut stmt = conn.prepare("SELECT id, list_id, word, reading, translation, frequency FROM word WHERE list_id = ?1")?;
         let word_iter = stmt.query_map([list_id], |row| {
             Ok(Word {
                 id: row.get(0)?,
