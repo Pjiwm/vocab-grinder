@@ -1,5 +1,5 @@
 pub const CREATE_LIST_TABLE: &str = "
-    CREATE TABLE IF NOT EXISTS list item(
+    CREATE TABLE IF NOT EXISTS list (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL
     );

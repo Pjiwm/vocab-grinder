@@ -25,6 +25,11 @@ fn compute_list(list_name: &str, state: State<StateManager>) -> Result<i64, Stri
 }
 
 #[tauri::command]
+fn is_computing_done(state: State<StateManager>) -> bool {
+    state.vocab_builder.results_done()
+}
+
+#[tauri::command]
 fn save_list(list_id: i32, state: State<StateManager>) -> Result<(), String> {
     state.save_list(list_id)
 }
@@ -39,6 +44,7 @@ fn main() {
             create_list,
             request_progress,
             compute_list,
+            is_computing_done,
             save_list
         ])
         .run(tauri::generate_context!())
@@ -87,6 +93,7 @@ impl StateManager {
             let words = self.vocab_builder.get_result();
             let repo = self.repo.clone();
             std::thread::spawn(move || {
+                println!("WRITING TO DBBB!");
                 for vocab_word in words {
                     let _ = repo.add_word_to_list(
                         list_id,
