@@ -73,7 +73,10 @@ const CreateForm = () => {
 const ProgressBar = ({ vocabListName }) => {
 
   const [progressStatus, setProgressStatus] = useState(0);
-  const [computed, setComputed] = useState(false);
+  const [progressDone, setProgressDone] = useState(false);
+  const [listId, setListId] = useState(null);
+  const [isComputingDone, setIsComputingDone] = useState(false);
+  const [isSavingToDB, setIsSavingToDb] = useState(false);
 
   const fetchProgress = async () => {
     try {
@@ -87,20 +90,39 @@ const ProgressBar = ({ vocabListName }) => {
   const computeList = async () => {
     try {
       console.log("NAME:", vocabListName);
-      const response = await invoke('compute_list', {
+      const listIdResponse = await invoke('compute_list', {
         listName: vocabListName,
       });
-      console.log('Compute list response:', response);
+      setListId(listIdResponse);
+      console.log('Compute list response:', listIdResponse);
     } catch (error) {
       console.error('Error computing list:', error);
     }
   };
 
+  const fetchComputingStatus = async () => {
+    try {
+      const progress = await invoke('is_computing_done');
+      setIsComputingDone(progress);
+    } catch (error) {
+      console.error('Error fetching computing done status:', error);
+    }
+  }
+
+  const saveList = async () => {
+    try {
+      await invoke("save_list", { listId });
+    } catch (error) {
+      console.error("Error saving list to database:", error);
+    }
+  }
+
+
   useEffect(() => {
     // Fetch progress every 100ms
     const interval = setInterval(() => {
       fetchProgress();
-    }, 1000);
+    }, 300);
 
     // Clean up interval on component unmount
     return () => clearInterval(interval);
@@ -108,11 +130,29 @@ const ProgressBar = ({ vocabListName }) => {
 
 
   useEffect(() => {
-    if (progressStatus >= 100 && !computed) {
+    if (progressStatus >= 100 && !progressDone) {
       computeList();
-      setComputed(true);
+      setProgressDone(true);
     }
-  }, [progressStatus, computed]);
+  }, [progressStatus, progressDone]);
+  // TODO: Fix this, it will run it many times even when it should only once. This does too many writes.
+  // For some reason when refreshing a build it will call this as well, when itially it does 0 times instead of once?
+  useEffect(() => {
+    // Fetch progress every 100ms
+    const interval = setInterval(() => {
+      fetchComputingStatus();
+      console.log(isComputingDone, listId, isSavingToDB);
+      if (isComputingDone && listId != null && !isSavingToDB) {
+        console.log("Saving list: ", listId)
+        setIsSavingToDb(true);
+        saveList();
+
+      }
+    }, 300);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(interval);
+  }, []);
 
 
   return (
