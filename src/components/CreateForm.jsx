@@ -69,9 +69,10 @@ const CreateForm = () => {
 };
 
 
-const ProgressBar = () => {
+const ProgressBar = ({ vocabListName }) => {
 
   const [progressStatus, setProgressStatus] = useState(0);
+  const [computed, setComputed] = useState(false);
 
   const fetchProgress = async () => {
     try {
@@ -79,6 +80,15 @@ const ProgressBar = () => {
       setProgressStatus(progress);
     } catch (error) {
       console.error('Error fetching progress:', error);
+    }
+  };
+
+  const computeList = async () => {
+    try {
+      const response = await invoke('compute_list', { list_name: vocabListName });
+      console.log('Compute list response:', response);
+    } catch (error) {
+      console.error('Error computing list:', error);
     }
   };
 
@@ -91,7 +101,17 @@ const ProgressBar = () => {
     // Clean up interval on component unmount
     return () => clearInterval(interval);
   }, []);
-  if (progressStatus >= 100 || progressStatus == 0) {
+
+
+  useEffect(() => {
+    if (progressStatus >= 100 && !computed) {
+      computeList();
+      setComputed(true);
+    }
+  }, [progressStatus, computed]);
+
+
+  if (progressStatus == 0) {
 
     return null; // Hide the component when progressStatus is 100 or more
   }
