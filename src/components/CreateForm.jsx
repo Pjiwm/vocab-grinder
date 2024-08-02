@@ -4,13 +4,14 @@ import { invoke } from "@tauri-apps/api/tauri";
 const CreateForm = () => {
   const [vocabListName, setVocabListName] = useState('');
   const [vocabListContent, setVocabListContent] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateClick = async () => {
-    console.log("submit")
+    console.log("submit");
+    setIsCreating(true);
     try {
       const response = await invoke('create_list', {
-        name: vocabListName,
-        content: vocabListContent
+        content: vocabListContent,
       });
       alert(response);  // Show the response from the Rust command
       console.log(response)
@@ -61,7 +62,7 @@ const CreateForm = () => {
             </button>
           </div>
         </form>
-        <ProgressBar />
+        {isCreating && <ProgressBar vocabListName={vocabListName} />}
       </div>
 
     </div>
@@ -85,7 +86,10 @@ const ProgressBar = ({ vocabListName }) => {
 
   const computeList = async () => {
     try {
-      const response = await invoke('compute_list', { list_name: vocabListName });
+      console.log("NAME:", vocabListName);
+      const response = await invoke('compute_list', {
+        listName: vocabListName,
+      });
       console.log('Compute list response:', response);
     } catch (error) {
       console.error('Error computing list:', error);
@@ -111,10 +115,6 @@ const ProgressBar = ({ vocabListName }) => {
   }, [progressStatus, computed]);
 
 
-  if (progressStatus == 0) {
-
-    return null; // Hide the component when progressStatus is 100 or more
-  }
   return (
     <div className="flex items-center justify-center p-4 bg-gray-800 rounded-lg">
       <div className="relative flex items-center">
