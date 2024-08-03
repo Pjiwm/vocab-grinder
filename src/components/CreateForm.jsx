@@ -4,13 +4,14 @@ import { invoke } from "@tauri-apps/api/tauri";
 const CreateForm = () => {
   const [vocabListName, setVocabListName] = useState('');
   const [vocabListContent, setVocabListContent] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateClick = async () => {
-    console.log("submit")
+    console.log("submit");
+    setIsCreating(true);
     try {
       const response = await invoke('create_list', {
-        name: vocabListName,
-        content: vocabListContent
+        content: vocabListContent,
       });
       alert(response);  // Show the response from the Rust command
       console.log(response)
@@ -61,7 +62,7 @@ const CreateForm = () => {
             </button>
           </div>
         </form>
-        <ProgressBar />
+        {isCreating && <ProgressBar vocabListName={vocabListName} />}
       </div>
 
     </div>
@@ -69,9 +70,13 @@ const CreateForm = () => {
 };
 
 
-const ProgressBar = () => {
+const ProgressBar = ({ vocabListName }) => {
 
   const [progressStatus, setProgressStatus] = useState(0);
+  const [progressDone, setProgressDone] = useState(false);
+  const [listId, setListId] = useState(null);
+  const [isComputingDone, setIsComputingDone] = useState(false);
+  const [isSavingToDB, setIsSavingToDb] = useState(false);
 
   const fetchProgress = async () => {
     try {
@@ -82,19 +87,74 @@ const ProgressBar = () => {
     }
   };
 
+  const computeList = async () => {
+    try {
+      console.log("NAME:", vocabListName);
+      const listIdResponse = await invoke('compute_list', {
+        listName: vocabListName,
+      });
+      setListId(listIdResponse);
+      console.log('Compute list response:', listIdResponse);
+    } catch (error) {
+      console.error('Error computing list:', error);
+    }
+  };
+
+  const fetchComputingStatus = async () => {
+    try {
+      const progress = await invoke('is_computing_done');
+      setIsComputingDone(progress);
+    } catch (error) {
+      console.error('Error fetching computing done status:', error);
+    }
+  }
+
+  const saveList = async () => {
+    try {
+      await invoke("save_list", { listId });
+    } catch (error) {
+      console.error("Error saving list to database:", error);
+    }
+  }
+
+
   useEffect(() => {
     // Fetch progress every 100ms
     const interval = setInterval(() => {
       fetchProgress();
-    }, 1000);
+    }, 300);
 
     // Clean up interval on component unmount
     return () => clearInterval(interval);
   }, []);
-  if (progressStatus >= 100 || progressStatus == 0) {
 
-    return null; // Hide the component when progressStatus is 100 or more
-  }
+
+  useEffect(() => {
+    if (progressStatus >= 100 && !progressDone) {
+      computeList();
+      setProgressDone(true);
+    }
+  }, [progressStatus, progressDone]);
+  // TODO: Fix this, it will run it many times even when it should only once. This does too many writes.
+  // For some reason when refreshing a build it will call this as well, when itially it does 0 times instead of once?
+  useEffect(() => {
+    // Fetch progress every 100ms
+    const interval = setInterval(() => {
+      fetchComputingStatus();
+      console.log(isComputingDone, listId, isSavingToDB);
+      if (isComputingDone && listId != null && !isSavingToDB) {
+        console.log("Saving list: ", listId)
+        setIsSavingToDb(true);
+        saveList();
+
+      }
+    }, 300);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(interval);
+  }, []);
+
+
   return (
     <div className="flex items-center justify-center p-4 bg-gray-800 rounded-lg">
       <div className="relative flex items-center">

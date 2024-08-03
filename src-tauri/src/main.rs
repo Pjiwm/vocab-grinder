@@ -20,8 +20,9 @@ fn request_progress(state: State<StateManager>) -> f64 {
 }
 
 #[tauri::command]
-fn compute_list(list_name: &str, state: State<StateManager>) -> Result<i64, String> {
-    state.compute_new_list(list_name)
+fn compute_list(list_name: String, state: State<StateManager>) -> Result<i64, String> {
+    println!("Computing");
+    state.compute_new_list(&list_name)
 }
 
 #[tauri::command]
