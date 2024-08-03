@@ -4,7 +4,7 @@ const SideBar = ({ onIconClick }) => {
     <div className="fixed top-0 left-0 h-screen w-16 m-0 flex flex-col 
     bg-gray-900 text-white shadow-lg">
       <SideBarIcon icon={<BiPencil size="28" />} text="Create new" onClick={() => onIconClick('CreateForm')} />
-      <SideBarIcon icon={<BiBookmarkAlt size="28" />} text="View items" />
+      <SideBarIcon icon={<BiBookmarkAlt size="28" />} text="View items" onClick={() => onIconClick('ListView')} />
       <SideBarIcon icon={<BiExport size="28" />} text="Export items" />
     </div>
   )
