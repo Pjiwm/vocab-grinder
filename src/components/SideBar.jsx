@@ -13,7 +13,7 @@ const SideBar = ({ onIconClick }) => {
 const SideBarIcon = ({ icon, text = 'tooltip', onClick }) => (
   <div className="sidebar-icon group" onClick={onClick}>
     {icon}
-    <span class="sidebar-tooltip group-hover:scale-100">
+    <span className="sidebar-tooltip group-hover:scale-100">
       {text}
     </span>
   </div>
