@@ -1,4 +1,22 @@
+import React, { useEffect, useState } from 'react';
+import { invoke } from "@tauri-apps/api/tauri";
+
 const DetailListView = ({ listId }) => {
+  const [wordsArray, setWordsArray] = useState([]);
+
+  const handleObtainListWords = async () => {
+    try {
+      const words = await invoke('show_list_items', { listId });
+      console.log("Obtained words from list:", words.length, "words");
+      setWordsArray(words);
+    } catch (error) {
+      console.error('Error obtaining words from list:', error);
+    }
+  };
+  useEffect(() => {
+    handleObtainListWords();
+  }, []);
+
   return (
     <div className="w-full">
       <table className="table-auto w-full text-left text-white">
