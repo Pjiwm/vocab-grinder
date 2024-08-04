@@ -37,14 +37,14 @@ const ListItem = ({ id, name }) => {
       transition-transform duration-300 hover:scale-105 hover:cursor-pointer`}>
       <div className="py-2">
         <div className="grid grid-cols-12 items-center mb-2 w-full">
-          <div className="font-bold text-4xl text-white col-span-11 md:px-3">{name}</div>
+          <div className="font-bold text-4xl text-white col-span-11 px-3">{name}</div>
           <div className="button-icon text-3xl">
             <MdOutlineDeleteForever />
           </div>
         </div>
         <p className="text-xl text-base text-white px-3"> Lorem ipsum dolor sit amet, consectetur adipisicing elit.
           Voluptatibus quia, nulla! Maiores et perferendis eaque, exercitationem praesentium nihil. </p>
-        <p className="pl-3 text-2xs text-bold text-red-500">#{id}</p>
+        <p className="pl-3 text-2xs text-bold text-red-400">#{id}</p>
       </div>
     </div>)
 }
