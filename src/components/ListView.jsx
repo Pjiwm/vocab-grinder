@@ -73,8 +73,7 @@ const ListItem = ({ id, name, onClick }) => {
 const Modal = ({ children, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 w-screen h-screen">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-11/12 h-11/12 max-w-screen-lg max-h-screen overflow-auto 
-        border-red-400 border-2 border-solid">
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-11/12 sm:w-10/12 md:w-9/12 lg:w-8/12 xl:w-7/12 h-5/6 max-w-screen-xl max-h-screen overflow-auto border-red-400 border-2 border-solid">
         <button onClick={onClose} className="button-icon font-bold py-2 px-4 rounded-full absolute top-4 right-4">
           X
         </button>
