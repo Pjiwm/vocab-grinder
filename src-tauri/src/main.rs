@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use repository::models::Word;
+use repository::models::{List, Word};
 use repository::Repository;
 use tauri::State;
 use vocab_finder::{ConcurrentVocabBuilder, VocabBuilder};
@@ -35,6 +35,11 @@ fn save_list(list_id: i32, state: State<StateManager>) -> Result<(), String> {
     state.save_list(list_id)
 }
 
+#[tauri::command]
+fn show_lists(state: State<StateManager>) -> Result<Vec<List>, String> {
+    state.show_lists()
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(StateManager::new(
@@ -46,7 +51,8 @@ fn main() {
             request_progress,
             compute_list,
             is_computing_done,
-            save_list
+            save_list,
+            show_lists
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -111,5 +117,9 @@ impl StateManager {
             });
             Ok(())
         }
+    }
+
+    fn show_lists(&self) -> Result<Vec<List>, String> {
+        self.repo.get_lists().map_err(|err| err.to_string())
     }
 }

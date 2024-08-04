@@ -23,8 +23,10 @@
     "windows": [
       {
         "title": "vocab-grinder",
-        "width": 800,
-        "height": 600
+        "width": 825,
+        "height": 450,
+        "minWidth": 825,
+        "minHeight": 450
       }
     ],
     "security": {
