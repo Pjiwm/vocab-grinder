@@ -71,7 +71,6 @@ const CreateForm = () => {
 
 
 const ProgressBar = ({ vocabListName }) => {
-
   const [progressStatus, setProgressStatus] = useState(0);
   const [progressDone, setProgressDone] = useState(false);
   const [listId, setListId] = useState(null);
@@ -104,30 +103,36 @@ const ProgressBar = ({ vocabListName }) => {
     try {
       const progress = await invoke('is_computing_done');
       setIsComputingDone(progress);
+      if (progress === true && !isSavingToDB && listId !== null) {
+        console.log("Computing is done");
+        saveList();
+      }
     } catch (error) {
       console.error('Error fetching computing done status:', error);
     }
-  }
+  };
 
   const saveList = async () => {
     try {
+      if (listId === null) {
+        console.error('List ID is null, cannot save list');
+        return;
+      }
+      setIsSavingToDb(true);
       await invoke("save_list", { listId });
+      console.log('List saved to database successfully');
     } catch (error) {
       console.error("Error saving list to database:", error);
     }
-  }
-
+  };
 
   useEffect(() => {
-    // Fetch progress every 100ms
-    const interval = setInterval(() => {
+    const progressInterval = setInterval(() => {
       fetchProgress();
     }, 300);
 
-    // Clean up interval on component unmount
-    return () => clearInterval(interval);
+    return () => clearInterval(progressInterval);
   }, []);
-
 
   useEffect(() => {
     if (progressStatus >= 100 && !progressDone) {
@@ -135,26 +140,22 @@ const ProgressBar = ({ vocabListName }) => {
       setProgressDone(true);
     }
   }, [progressStatus, progressDone]);
-  // TODO: Fix this, it will run it many times even when it should only once. This does too many writes.
-  // For some reason when refreshing a build it will call this as well, when itially it does 0 times instead of once?
+
   useEffect(() => {
-    // Fetch progress every 100ms
-    const interval = setInterval(() => {
+    const computingStatusInterval = setInterval(() => {
       fetchComputingStatus();
       console.log(isComputingDone, listId, isSavingToDB);
-      if (isComputingDone && listId != null && !isSavingToDB) {
-        console.log("Saving list: ", listId)
-        setIsSavingToDb(true);
-        saveList();
-
-      }
     }, 300);
 
-    // Clean up interval on component unmount
-    return () => clearInterval(interval);
+    return () => clearInterval(computingStatusInterval);
   }, []);
 
-
+  useEffect(() => {
+    if (isComputingDone && listId !== null && !isSavingToDB) {
+      console.log("Saving list with ID: ", listId);
+      saveList();
+    }
+  }, [isComputingDone, listId, isSavingToDB]);
   return (
     <div className="flex items-center justify-center p-4 bg-gray-800 rounded-lg">
       <div className="relative flex items-center">
