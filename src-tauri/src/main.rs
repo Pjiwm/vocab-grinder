@@ -45,6 +45,11 @@ fn show_list_items(list_id: i32, state: State<StateManager>) -> Result<Vec<Word>
     state.show_list_items(list_id)
 }
 
+#[tauri::command]
+fn delete_list(list_id: i32, state: State<StateManager>) -> Result<(), String> {
+    state.delete_list(list_id)
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(StateManager::new(
@@ -58,7 +63,8 @@ fn main() {
             is_computing_done,
             save_list,
             show_lists,
-            show_list_items
+            show_list_items,
+            delete_list
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -132,6 +138,12 @@ impl StateManager {
     fn show_list_items(&self, list_id: i32) -> Result<Vec<Word>, String> {
         self.repo
             .get_words_for_list(list_id)
+            .map_err(|err| err.to_string())
+    }
+
+    fn delete_list(&self, list_id: i32) -> Result<(), String> {
+        self.repo
+            .delete_list(list_id)
             .map_err(|err| err.to_string())
     }
 }

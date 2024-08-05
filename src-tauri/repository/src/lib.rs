@@ -89,4 +89,19 @@ impl Repository {
         }
         Ok(words)
     }
+
+    pub fn delete_list(&self, list_id: i32) -> Result<()> {
+        let mut conn = self.get_connection()?;
+        let tx = conn.transaction()?;
+
+        // Delete all words associated with the list
+        tx.execute("DELETE FROM word WHERE list_id = ?1", params![list_id])?;
+
+        // Delete the list itself
+        tx.execute("DELETE FROM list WHERE id = ?1", params![list_id])?;
+
+        // Commit the transaction
+        tx.commit()?;
+        Ok(())
+    }
 }
