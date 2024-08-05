@@ -3,7 +3,6 @@ import { invoke } from "@tauri-apps/api/tauri";
 import DetailListView from './DetailListView';
 import React, { useEffect, useState } from 'react';
 
-
 const ListView = () => {
   const [listArray, setListArray] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -19,6 +18,7 @@ const ListView = () => {
       console.error('Error obtaining lists:', error);
     }
   };
+
   useEffect(() => {
     handleObtainLists();
   }, []);
@@ -34,11 +34,12 @@ const ListView = () => {
     setSelectedListId(null);
   };
 
-
   return (
     <div className="flex flex-col pt-12 px-4 items-center h-full w-full bg-gray-800 min-h-screen">
       <div className="flex flex-col items-center w-full space-y-5">
-        {listArray.map(item => (<ListItem key={item.id} {...item} onClick={() => handleClick(item.id)} />))}
+        {listArray.map(item => (
+          <ListItem key={item.id} {...item} onClick={() => handleClick(item.id)} onDelete={handleObtainLists} />
+        ))}
       </div>
       {showModal && (
         <Modal onClose={handleCloseModal}>
@@ -51,7 +52,18 @@ const ListView = () => {
 
 export default ListView;
 
-const ListItem = ({ id, name, onClick }) => {
+const ListItem = ({ id, name, onClick, onDelete }) => {
+  const handleDeleteList = async (event) => {
+    event.stopPropagation(); // Prevent the modal from opening
+    try {
+      await invoke('delete_list', { listId: id });
+      console.log("Deleted list", { listId: id });
+      onDelete(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting lists:', error);
+    }
+  };
+
   return (
     <div onClick={onClick}
       className={`w-full md:w-7/12 xl:w-9/12 2xl:w-9/12 rounded shadow-lg bg-gray-900 border-solid border-2 border-red-400
@@ -59,7 +71,7 @@ const ListItem = ({ id, name, onClick }) => {
       <div className="py-2">
         <div className="grid grid-cols-12 items-center mb-2 w-full">
           <div className="font-bold text-4xl text-white col-span-11 px-3">{name}</div>
-          <div className="button-icon text-3xl">
+          <div className="button-icon text-3xl" onClick={handleDeleteList}>
             <MdOutlineDeleteForever />
           </div>
         </div>
